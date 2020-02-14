@@ -61,13 +61,13 @@ heat_data <- read.csv("rawdata/vsl_heat.csv")[,c(1,3)]%>%
 ages <- c("1-4","5-9","10-14","15-19","20-24",
           "25-29","30-34","35-39","40-44",
           "45-49","50-54","55-59","60-64","65-69",
-          "70-74","75-79")
+          "70-74","75-79","80-84")
 
 # 4. GBD data clean so has only population at each age, and percentage female at each age.
 
 # create a cleaned dataset of GBD data with country, age, and populations
 GBD_data <- read.csv("rawdata/GBD AgeDists.csv") %>%  # read in age distributions from GBD data
-                  filter(age_group_id >= 5 & age_group_id <= 20 & year_id == 2017 & location_id != 533)%>%  # 533 is the state of georgia not the country.
+                  filter(age_group_id %in% c(5:20,30) & year_id == 2017 & location_id != 533)%>%  # 533 is the state of georgia not the country.
                   select(location_name, sex_name, age_group_name, age_group_id, val) %>%
                   filter(location_name %in% heat_data$DisplayString) %>%
                   spread(key = sex_name,value = val) %>%
@@ -80,7 +80,7 @@ perc_fmle <- GBD_data %>% select(-c(Both,Female,Male)) %>%
                           arrange(age_group_id) %>% 
                           select(-c(age_group_name, age_group_id)) %>%
                           set_rownames(ages) %>%
-                          set_colnames(heat_data$ISO_Code[match(colnames(.) ,heat_data$DisplayString)])
+                          set_colnames(heat_data$ISO_Code[match(colnames(.), heat_data$DisplayString)])
 
 # get the general population age each age group only.
 gen_pop   <- GBD_data %>% select(-c(perc_fmle,Female,Male)) %>% 
@@ -92,28 +92,28 @@ gen_pop   <- GBD_data %>% select(-c(perc_fmle,Female,Male)) %>%
                           set_rownames(heat_data$ISO_Code[match(rownames(.) ,heat_data$DisplayString)])
 
 # get the percentage female age 80+ only - this needs adapting so have data for every year.
-pf_age80 <- read.csv("rawdata/GBD AgeDists.csv") %>%  # read in age distributions from GBD data
-                          filter(age_group_id == 24 & year_id == 2017 & location_id != 533)%>%  # 533 is the state of georgia not the country.
-                          select(location_name, sex_name, age_group_name, age_group_id, val) %>%
-                          filter(location_name %in% heat_data$DisplayString) %>%
-                          spread(key = sex_name,value = val) %>%
-                          mutate(perc_fmle = Female / Both) %>%
-                          arrange(location_name,age_group_id) %>%
-                          select(location_name,perc_fmle) %>% 
-                          set_rownames(heat_data$ISO_Code[match(.$location_name ,heat_data$DisplayString)])
+#pf_age80 <- read.csv("rawdata/GBD AgeDists.csv") %>%  # read in age distributions from GBD data
+#                          filter(age_group_id == 24 & year_id == 2017 & location_id != 533)%>%  # 533 is the state of georgia not the country.
+#                          select(location_name, sex_name, age_group_name, age_group_id, val) %>%
+#                          filter(location_name %in% heat_data$DisplayString) %>%
+#                          spread(key = sex_name,value = val) %>%
+#                          mutate(perc_fmle = Female / Both) %>%
+#                          arrange(location_name,age_group_id) %>%
+#                          select(location_name,perc_fmle) %>% 
+#                          set_rownames(heat_data$ISO_Code[match(.$location_name ,heat_data$DisplayString)])
 
 #  5.  Use WHO Country Specific Lifetables to estimate General Mortality rates by 5 year age bands.
 m_lifetable <- read.csv("rawdata/m_lifetable.csv",header = TRUE,row.names = 1) %>% 
                   t() %>% as.data.frame() %>%  
                   rownames_to_column(.data = .,'rn') %>%  
                   filter(rn %in% heat_data$ISO_Code) %>%
-                  set_rownames(.$rn) %>% select(-c("rn","0-1","80-84","85+"))
+                  set_rownames(.$rn) %>% select(-c("rn","0-1","85+"))
     
 f_lifetable <- read.csv("rawdata/f_lifetable.csv",header = TRUE,row.names = 1) %>% 
                   t() %>% as.data.frame() %>%  
                   rownames_to_column(.data = .,'rn') %>%  
                   filter(rn %in% heat_data$ISO_Code) %>% 
-                  set_rownames(.$rn) %>% select(-c("rn","0-1","80-84","85+"))
+                  set_rownames(.$rn) %>% select(-c("rn","0-1","85+"))
 
 who_mort <- m_lifetable*(1-t(perc_fmle[,rownames(m_lifetable)])) + f_lifetable*t(perc_fmle[,rownames(m_lifetable)])
 
