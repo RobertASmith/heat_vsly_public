@@ -17,7 +17,13 @@ There are several folders in this repository:
 
 
 Contact:
-Robert Smith 
+[Robert Smith](https://www.linkedin.com/in/robert-smith-53b28438/)
+
+School of Health and Related Research
+
 University of Sheffield
+
 rasmith3@sheffield.ac.uk
+
+
 
