@@ -5,14 +5,28 @@
 # Description:  This script undertakes the core analysis. It is stand-alone.  
 # ====== #
 rm(list =ls())
-heat_data <- read.csv("cleandata/heat_data.csv",stringsAsFactors = F,row.names = 2)
-gen_pop   <- read.csv("cleandata/gen_pop.csv",stringsAsFactors = F,row.names = 1)
-who_mort  <- read.csv("cleandata/who_mort.csv",stringsAsFactors = F,row.names = 1)
-dlyr      <- read.csv("cleandata/d_lyr.csv",stringsAsFactors = F,row.names = 1)
+
+# source all functions needed.
+source("functions/f_install_n_load.R")
+source("functions/f_models.R")
+#source("functions/f_dlyr.R")
+
+
+# run clean and load files.
+
+#source(file = "R/clean_load.R") # cleans all raw data and loads necessary data.
+
+heat_data   <- read.csv("cleandata/heat_data.csv",stringsAsFactors = F,row.names = 2) # heat data download from cleaned data file
+gen_pop     <- read.csv("cleandata/gen_pop.csv",stringsAsFactors = F,row.names = 1)
+dlyr        <- read.csv("cleandata/dlyr.csv",stringsAsFactors = F,row.names = 1)
+vsly        <- read.csv("cleandata/vsly.csv",stringsAsFactors = F,row.names = 1)
+gbd_lt      <- read.csv("cleandata/gbd17_mortrates.csv",stringsAsFactors = F,row.names = 1)
+# who_mort  <- read.csv("cleandata/who_mort.csv",stringsAsFactors = F,row.names = 1)
 
 v_countries = rownames(heat_data)
 
-source(file = "functions/f_models.R")
+#source(file = "R/calc_dependencies.R")
+
 
 # CREATE RESULTS TABLE
 v_resultnames <- c( "vsly_w2074","heat1_w2074","heat2_w2074","vsl11_w2074",
@@ -257,3 +271,82 @@ for(c in 1:length(v_countries)){
 }
   
   write.csv(results, file="outputs/Results.csv") 
+  
+#------------------------#
+#  ADDITIONAL ANALYSIS   #
+#------------------------#
+
+# simple example graph for latvia
+  
+  # set country to latvia
+  temp.country <- "LVA"   
+  
+  # set individual ages from 20 to 74
+  ages <- c(rep(NA,19),
+            rep(c("20-24","25-29","30-34","35-39","40-44","45-49",
+                  "50-54","55-59","60-64","65-69","70-74"),each=5),
+            rep(NA,25))
+  
+  # age distribution, 1s and 0s indicating whethether in specific age group or not.
+  input.agedist    <-   matrix(0,nrow = 1,ncol = 11) 
+  colnames(input.agedist)<-c("20-24","25-29","30-34","35-39",
+                             "40-44","45-49","50-54","55-59",
+                             "60-64","65-69","70-74")
+  
+  # Create results table:
+  age.results <- matrix(data = NA,nrow = 100,ncol = 4)
+  colnames(age.results) <- c("vsly","heat1", "heat2","vsl11")
+  age.results.c <- age.results # age results c to be used for cycling
+  
+  for(a in 20:74){
+    input.agedist[,] <- 0         # initialise age distributions to zeros
+    input.agedist[,ages[a]] <- 1  # assign age to appropriate band.
+    
+    age.results[a,]  <- c(f.vsly.mb(n_people = 1,
+                                    add.mins = 10,
+                                    country = temp.country,
+                                    mode = "walking",
+                                    select.age.dist = input.agedist),
+                          f.vsl.1g( n_people = 1,
+                                    add.mins = 10,
+                                    country = temp.country,
+                                    mode = "walking",
+                                    select.age.dist = input.agedist),
+                          f.vsl.2g( n_people = 1,
+                                    add.mins = 10,
+                                    country = temp.country,
+                                    mode = "walking",
+                                    select.age.dist = input.agedist),
+                          f.vsl.11g(n_people = 1,
+                                    add.mins = 10,
+                                    country = temp.country,
+                                    mode = "walking",
+                                    select.age.dist = input.agedist)
+    )
+    
+    # ignore cycling for now.
+    #  age.results.c[a,] <- c(f.vsly.mb(n_people = 1,
+    #                                  add.mins = 10,
+    #                                  country = temp.country,
+    #                                  mode = "cycling",
+    #                                  select.age.dist = input.agedist),
+    #                        f.vsl.1g( n_people = 1,
+    #                                  add.mins = 10,
+    #                                  country = temp.country,
+    #                                  mode = "cycling",
+    #                                  select.age.dist = input.agedist),
+    #                        f.vsl.2g( n_people = 1,
+    #                                  add.mins = 10,
+    #                                  country = temp.country,
+    #                                  mode = "cycling",
+    #                                  select.age.dist = input.agedist),
+    #                        f.vsl.11g(n_people = 1,
+    #                                  add.mins = 10,
+    #                                  country = temp.country,
+    #                                  mode = "cycling",
+    #                                  select.age.dist = input.agedist)
+    #  )
+    
+  } # end age loop
+
+write.csv(x = age.results,file = "outputs/age_specific_results.csv" ) 

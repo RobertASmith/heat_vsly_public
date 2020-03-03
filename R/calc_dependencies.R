@@ -5,7 +5,8 @@
 # Description:  This script creates discounted life expectancies at each age and calculates the VSLY
 #               for each country based upon previous formulas.  
 # ====== #
-
+library(trqwe)
+#remotes::install_github("traversc/trqwe")
 
 ##==== 
 ## Calculating Discounted Life Years Remaining for each year of age.
