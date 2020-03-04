@@ -5,25 +5,24 @@
 # Description:  This script cleans data from original files and saves to cleaned folder.  
 # ====== #
 
-
 rm(list=ls())
 
 # INSTALL PACKAGES (Function courtesty of Paul Schneider)
-# install_n_load <- function(packages){
-#   for(package in packages){
-#     if(package %in% rownames(installed.packages()) == FALSE) {
-#       print(paste("installing",package))
-#       install.packages(package)
-#     }
-#     eval(parse(text=paste('require(',package,')')))
-#   }
-# }
+f_install_n_load <- function(packages){
+   for(package in packages){
+     if(package %in% rownames(installed.packages()) == FALSE) {
+       print(paste("installing",package))
+       install.packages(package)
+     }
+     eval(parse(text=paste('require(',package,')')))
+   }
+  }
 
 required_packages = c('knitr','tidyverse','rworldmap',
                       'reshape2','ggplot2','dplyr',
                       'tidyr','mc2d','ggrepel',
                       'gridExtra','kableExtra','rgeos',
-                      'flextable','viridis','readxl','magrittr')
+                      'flextable','viridis','readxl','magrittr','data.table')
 
 f_install_n_load(required_packages)
 
@@ -66,186 +65,68 @@ ages <- c("1-4","5-9","10-14","15-19","20-24",
 # 4. GBD data clean so has only population at each age, and percentage female at each age.
 
 # create a cleaned dataset of GBD data with country, age, and populations
-GBD_data <- read.csv("rawdata/GBD AgeDists.csv") %>%  # read in age distributions from GBD data
-                  filter(age_group_id %in% c(5:20,30) & year_id == 2017 & location_id != 533)%>%  # 533 is the state of georgia not the country.
-                  select(location_name, sex_name, age_group_name, age_group_id, val) %>%
-                  filter(location_name %in% heat_data$DisplayString) %>%
-                  spread(key = sex_name,value = val) %>%
-                  mutate(perc_fmle = Female / Both) %>%
-                  arrange(location_name,age_group_id)
+#GBD_data <- fread("rawdata/GBD AgeDists.csv") %>%  # read in age distributions from GBD data
+#                  filter(age_group_id %in% c(5:20,30) & year_id == 2017 & location_id != 533)%>%  # 533 is the state of georgia not the country.
+#                  select(location_name, sex_name, age_group_name, age_group_id, val) %>%
+#                  filter(location_name %in% heat_data$DisplayString) %>%
+#                  spread(key = sex_name,value = val) %>%
+#                  mutate(perc_fmle = Female / Both) %>%
+#                  arrange(location_name,age_group_id)
 
-# manipulate to get percent female at each age group only.
-perc_fmle <- GBD_data %>% select(-c(Both,Female,Male)) %>% 
-                          spread(value = perc_fmle,key = location_name) %>%  
-                          arrange(age_group_id) %>% 
-                          select(-c(age_group_name, age_group_id)) %>%
-                          set_rownames(ages) %>%
-                          set_colnames(heat_data$ISO_Code[match(colnames(.), heat_data$DisplayString)])
+# load data from GBD study, excluding the US state of georgia
+dt_gbdpop       <- fread("rawdata/GBD AgeDists.csv")[age_group_name %in% 1:94 & 
+                               year_id == 2017 & 
+                               location_id != 533 & 
+                               location_name %in% heat_data$DisplayString,
+                              .(location_name, sex_name, age_group_name, val)] 
 
-# get the general population age each age group only.
-gen_pop   <- GBD_data %>% select(-c(perc_fmle,Female,Male)) %>% 
-                          spread(value = Both,key = location_name) %>%  
-                          arrange(age_group_id) %>%
-                          select(-c(age_group_id,age_group_name)) %>% 
-                          t() %>% 
-                          set_colnames(ages) %>% 
-                          set_rownames(heat_data$ISO_Code[match(rownames(.) ,heat_data$DisplayString)])
+dt_gbdpop       <- dcast(data = dt_gbdpop,formula = ... ~ sex_name,value.var = "val") # make wide
 
-# get the percentage female age 80+ only - this needs adapting so have data for every year.
-#pf_age80 <- read.csv("rawdata/GBD AgeDists.csv") %>%  # read in age distributions from GBD data
-#                          filter(age_group_id == 24 & year_id == 2017 & location_id != 533)%>%  # 533 is the state of georgia not the country.
-#                          select(location_name, sex_name, age_group_name, age_group_id, val) %>%
-#                          filter(location_name %in% heat_data$DisplayString) %>%
-#                          spread(key = sex_name,value = val) %>%
-#                          mutate(perc_fmle = Female / Both) %>%
-#                          arrange(location_name,age_group_id) %>%
-#                          select(location_name,perc_fmle) %>% 
-#                          set_rownames(heat_data$ISO_Code[match(.$location_name ,heat_data$DisplayString)])
+dt_gbdpop$perc_fmle = dt_gbdpop$Female / dt_gbdpop$Both  # create new column percent female.
 
-#  5.  Use WHO Country Specific Lifetables to estimate General Mortality rates by 5 year age bands.
-m_lifetable <- read.csv("rawdata/m_lifetable.csv",header = TRUE,row.names = 1) %>% 
-                  t() %>% as.data.frame() %>%  
-                  rownames_to_column(.data = .,'rn') %>%  
-                  filter(rn %in% heat_data$ISO_Code) %>%
-                  set_rownames(.$rn) %>% select(-c("rn","0-1","85+"))
-    
-f_lifetable <- read.csv("rawdata/f_lifetable.csv",header = TRUE,row.names = 1) %>% 
-                  t() %>% as.data.frame() %>%  
-                  rownames_to_column(.data = .,'rn') %>%  
-                  filter(rn %in% heat_data$ISO_Code) %>% 
-                  set_rownames(.$rn) %>% select(-c("rn","0-1","85+"))
+dt_gbdpop$ISO_Code = heat_data$ISO_Code[match(dt_gbdpop$location_name,heat_data$DisplayString)]
 
-who_mort <- m_lifetable*(1-t(perc_fmle[,rownames(m_lifetable)])) + f_lifetable*t(perc_fmle[,rownames(m_lifetable)])
+colnames(dt_gbdpop) <- c("DisplayString","age","All","Female","Male","perc_fmle","ISO_Code")
 
-#-----------------------------#
-# LIFE EXPECTANCY AT EACH AGE #
-#-----------------------------#
+class(dt_gbdpop$age) = "numeric"   # change age-group name to be numeric
 
-# limit countries to those with heat data and mortality data.
-countries <- heat_data$ISO_Code[heat_data$ISO_Code %in% rownames(who_mort)]
+dt_gbdpop <- dt_gbdpop[order(ISO_Code,age)]   # order by ISO code then age.
 
-heat_data <- heat_data[heat_data$ISO_Code %in% rownames(who_mort),]
+#=====================================#
+#             Mort rates              #
+#=====================================#
 
-# set discount rate for time.
-d.r <- 0.00
+# load data.
+dt_mort     <- rbind(fread("rawdata/gbd_lifetables_2017_fmle.csv"),fread("rawdata/gbd_lifetables_2017_male.csv"))
 
-#===
-# 1. get life years remaining at 85 for each country:
-#===
+# filter data -remove georgia USA from dataset so doesn't get mixed up with European country
+dt_mort <- dt_mort[measure_name == "Probability of death" & age_group_name %in% 1:100 & 
+                     location_name %in% heat_data$DisplayString & location_id != 533,
+         .(age_group_name,val), 
+         by= .(location_name,sex_name)]
 
-temp <- read.csv("rawdata/who_complete.csv",header = TRUE)
+# Reshape to wide
+dt_mort       <- dcast(data = dt_mort,formula = ... ~ sex_name,value.var = "val") # make wide
 
-# create dataframe with life years remaining in two columns (male and female).
-lyr85 <- data.frame(male = t(temp[133,seq(4,length(temp[1,]),2)]),
-                    female = t(temp[133,seq(5,length(temp[1,]),2)])) %>% 
-  set_colnames(c("male","female"))
-lyr85[lyr85>100] <- NA  # RWA has weird values.
+# assign ISO Codes
+dt_mort$ISO_Code = heat_data$ISO_Code[match(dt_mort$location_name,heat_data$DisplayString)]
 
-# weight lyr by sex using percentage in age group female.
-v.female <- perc_fmle["80-84",rownames(who_mort)] %>% t()
+colnames(dt_mort) <- c("DisplayString","age","Female","Male","ISO_Code")
 
-# vector of life years remaining at 85 * vector percent female age 80-84.
-lyr85 <- lyr85[rownames(who_mort),"male"]*(1-v.female) + lyr85[rownames(who_mort),"female"] * v.female
+class(dt_mort$age) = "numeric"   # change age-group name to be numeric
+
+dt_mort <- dt_mort[order(ISO_Code,age)]   # order by ISO code then age.
 
 
-#===
-# 2. Use Mortality rates at each age to estimate expected life years remaining at each age 20-85.
-#===
-
-f.dlyr <- function(country,d.r){
-  
-  # Get survival probabilities for each year from 1 to 84
-  v.Ps <- t(1- who_mort[country,]) %>% 
-    rep(each=5) %>%  tail(., -1)
-  
-  # Create matrices for discount rates and life years remaining.
-  m.dr <- m.lyr <- matrix(data = NA,
-                          nrow = 100,
-                          ncol = length(v.Ps),
-                          dimnames = list(1:100))
-  
-  # Create expected life years per year from 1-85
-  for (a in 1:length(v.Ps)){
-    
-    for(x in 1:length(v.Ps)){
-      if(x>=a){
-        m.lyr[x,a] <- prod(v.Ps[a:x])
-      }else{
-        m.lyr[x,a] <- 0
-      }
-    }
-  }
-  
-  # create expected life years from 86-100 within the same matrix
-  s.clyr85 <- floor(lyr85[country,])  # number of complete years remaining.
-  
-  m.lyr[(85:(85+s.clyr85-1)),]  <-  matrix(m.lyr[84,],ncol = 84 ,nrow = s.clyr85, byrow="T") # add the expected life years remaining above 85 at each age. 
-  m.lyr[(85+s.clyr85),]         <-  m.lyr[84,] * (lyr85[country,] - s.clyr85) 
-  m.lyr[(85+s.clyr85+1):100,]   <-  0                                           
-  
-  #create a matrix of discount rates using a similar method.
-  for(a in 1:ncol(m.lyr)){
-    m.dr[a:nrow(m.lyr),a] <- 1/(1+d.r)^(0:(nrow(m.lyr)-a))
-  }
-  
-  m.dr[is.na(m.dr)] <- 0 # to set NAs to zero.
-  
-  # multiply the matrix of discount rates by the matrix of expected life by the matrix of discount rates
-  d.lyr <- m.lyr * m.dr
-  
-  return(colSums(d.lyr))
-}
-
-#=====
-# 3. Store these discounted life years remaining for each age for each country
-#=====
-m.C_dlyr <- matrix(NA,
-                   ncol = 84,
-                   nrow = 49)
-rownames(m.C_dlyr)  <-  rownames(heat_data)
-
-for(x in 1:nrow(heat_data)){
-  m.C_dlyr[x,] <- f.dlyr(paste(heat_data$ISO_Code[x]),d.r=d.r)    # function using countries and discount rate of 0.015
-}
-
-write.csv(x = m.C_dlyr,file = "cleandata/country_dlyr.csv")
-
-
-# And use these to calculate discounted life years remaining for each 5 year age band.
-dlyr <- matrix(data = NA,
-               nrow = nrow(m.C_dlyr),
-               ncol = 17)
-rownames(dlyr) <- heat_data$ISO_Code
-colnames(dlyr) <- colnames(who_mort)
-
-# fill in the first column age 1-4
-for(x in 1:nrow(m.C_dlyr)){
-  
-  dlyr[x,1] <- mean(m.C_dlyr[x,1:4])
-  # fill in all other columns to 80-84
-  for (a in 2:17) {
-    dlyr[x,a] <- mean(m.C_dlyr[x,((a-1)*5):(a*5-1)])
-  }
-}
-
-
-#====
-# Calculate VSLY for each country using this equation.
-#    VSLY = VSL / dLYR(@50)
-
-heat_data$VSLY <- heat_data$VSL / m.C_dlyr[,50]      # simply the VSL divided by the discounted life years remaining at 50 
-
-#===
-
-
-
-# save all cleaned files to csv format.                          
+# save all cleaned files to csv format.  
+write.csv(x = dt_mort, file = "cleandata/gbd17_mortrates.csv")
 write.csv(x = heat_data, file = "cleandata/heat_data.csv") 
-write.csv(x = perc_fmle, file = "cleandata/perc_fmle.csv") 
-write.csv(x = gen_pop,   file = "cleandata/gen_pop.csv") 
-write.csv(x = who_mort,  file = "cleandata/who_mort.csv") 
+write.csv(x = dt_gbdpop, file = "cleandata/gbd_pop.csv")
+
+#write.csv(x = perc_fmle, file = "cleandata/perc_fmle.csv") 
+#write.csv(x = gen_pop,   file = "cleandata/gen_pop.csv") 
+#write.csv(x = who_mort,  file = "cleandata/who_mort.csv") 
 
 
 # remove unnecessary data
-
-rm(countries,heat_mort,GBD_data,install_n_load,required_packages,ages,m_lifetable,f_lifetable)
+rm(countries,heat_mort,GBD_data,required_packages,ages, f_install_n_load)

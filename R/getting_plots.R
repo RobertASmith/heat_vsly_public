@@ -13,20 +13,19 @@ library(ggrepel)
 library(gridExtra)
 library(dplyr)
 
-source(file = "functions/f_models.R")
-
 
 rm(list=ls())
 #--- PLOTTING COLOURS  ---# 
 # fixed to ensure consistency
 col_list = list(col_vsly = "blue",
                 col_heat1 = "red",
-                col_vsl11 = "green")
+                col_vsl55 = "green")
 
 #--- LOAD RESULTS ---#
 
 results <- read.csv("./outputs/Results.csv",stringsAsFactors = F,row.names = 1)
 
+results[,1:4]
 #---- Table 1 ----
 
 # Latex
@@ -34,19 +33,19 @@ kable(x = results[c("FRA", "DEU","LUX","ROU","LVA", "POL"),1:4],
       align = 'c',
       format = "latex",
       digits = 2,
-      col.names = c("VSLY","Heat1","Heat2","VSL11"),
+      col.names = c("VSLY","Heat1","Heat2","VSL55"),
       caption = "Walking age 20-74")
 
 # datatable
 table1 <- datatable(round(results[c("FRA", "DEU","LUX","ROU","LVA", "POL"),1:4],2),
-          colnames = c("VSLY","Heat1","Heat2","VSL11"),
+          colnames = c("VSLY","Heat1","Heat2","VSL55"),
           options = list(dom = 't'))
 
 ggsave(filename = table1,plot = table1)
 
 # full table of results for all countries
 datatable(results[,1:4],
-          colnames = c("VSLY","Heat1","Heat2","VSL11"))
+          colnames = c("VSLY","Heat1","Heat2","VSL55"))
 
 #---- Figure 1 ----
 # Comparing estimated monetary benefit per capita (2017 Euro) using four approaches.
@@ -55,12 +54,12 @@ datatable(results[,1:4],
 df <- data.frame(vsly  = results[,"vsly_w2074"],
                  heat1 = results[,"heat1_w2074"],
                  heat2 = results[,"heat2_w2074"],
-                 vsl11 = results[,"vsl11_w2074"],
+                 vsl55 = results[,"vsl55_w2074"],
                  country = rownames(results))
-
+#class(df$country) = "character"
 # change to long format.
 long <- melt(data=df,
-             measure.vars =c("vsly", "heat1","vsl11"),
+             measure.vars =c("vsly", "heat1","vsl55"),
              variable.name = "method",
              value.name = "estimate")
 
@@ -84,9 +83,9 @@ fig1 <- ggplot(data = long,
                      size = 2,nudge_x = 2, nudge_y = -5,direction = "y",
                      segment.color = "blue",colour = "blue")+
     theme(legend.position = c(0.9, 0.2))+
-    scale_colour_manual(values = c(vsly=col_list$col_vsly,
+    scale_colour_manual(values = c(vsly = col_list$col_vsly,
                                    heat1 = col_list$col_heat1,
-                                   vsl11 = col_list$col_vsl11))
+                                   vsl55 = col_list$col_vsl55))
   
 ggsave(plot = fig1,filename = "./outputs/figure1.png")
 
@@ -96,31 +95,32 @@ ggsave(plot = fig1,filename = "./outputs/figure1.png")
 long_yng <- data.frame(vsly  = results[,"vsly_w2044"],
                  heat1 = results[,"heat1_w2044"],
                  heat2 = results[,"heat2_w2044"],
-                 vsl11 = results[,"vsl11_w2044"],
+                 vsl55 = results[,"vsl55_w2044"],
                  country = rownames(results)) %>% 
                       melt(.,
-                           measure.vars =c("vsly", "heat1","vsl11"),
+                           measure.vars =c("vsly", "heat1","vsl55"),
                            variable.name = "method",
                            value.name = "estimate")
+class(long_yng$country) = "character"
 
 long_old <- data.frame(vsly  = results[,"vsly_w4574"],
                      heat1 = results[,"heat1_w4574"],
                      heat2 = results[,"heat2_w4574"],
-                     vsl11 = results[,"vsl11_w4574"],
+                     vsl55 = results[,"vsl55_w4574"],
                      country = rownames(results)) %>% 
                           melt(data=.,
-                               measure.vars =c("vsly", "heat1","vsl11"),
+                               measure.vars =c("vsly", "heat1","vsl55"),
                                variable.name = "method",
                                value.name = "estimate")
+class(long_old$country) = "character"
+
 
 # create young plot
 plot_yng <- ggplot(data = long_yng,
-               aes(x=heat2,y=estimate))+
+               aes(x=heat2,y=estimate, col = method))+
         theme_classic()+
-        geom_point(aes(colour = method))+
+        geom_point()+
         geom_abline(slope = 1)+
-        #annotate(geom="text", x=130, y=150, 
-        #         label="VSLY = HEAT 2Grp", color="black")+
         labs(title = "Age 20-44",
              #subtitle = "Comparing alternative methods to HEAT-2Grp",
              caption = "Data Sources: WHO Mort, GBD Pop, HEAT VSL", 
@@ -128,36 +128,27 @@ plot_yng <- ggplot(data = long_yng,
              y = "Other Methods (Euro)",
              col = "Model")+
         xlim(0, 150) + ylim(0,150)+
-        #geom_label_repel(data = long_yng[long_yng$method=="vsly",], 
-        #                 label = long_yng$country[long_yng$method=="vsly"], 
-        #                 size = 2,segment.color = "blue",colour = "blue")+
         theme(legend.position = c(0.9, 0.2),plot.title = element_text(hjust = 0.5))+
         scale_colour_manual(values = c(vsly=col_list$col_vsly,
                                        heat1 = col_list$col_heat1,
-                                       vsl11 = col_list$col_vsl11))
+                                       vsl55 = col_list$col_vsl55))
 
 # create old plot
 plot_old <- ggplot(data = long_old,
-                   aes(x=heat2, y=estimate))+
+                   aes(x=heat2, y=estimate,col=method))+
   theme_classic()+
-  geom_point(aes(colour = method))+
+  geom_point()+
   geom_abline(slope = 1)+
-  #annotate(geom="text", x=130, y=150, 
-  #         label="VSLY = HEAT 2Grp", color="black")+
   labs(title = "Age 45-74",
        caption = "Data Sources: WHO Mort, GBD Pop, HEAT VSL", 
        x = "HEAT 2 Group Method (Euro)", 
        y = "Other Methods (Euro)",
        col = "Model")+
   xlim(0, 150) + ylim(0,150)+
-  #geom_label_repel(data = long_old[long_old$method=="vsly",], 
-  #                 label = long_old$country[long_old$method=="vsly"], 
-  #                 size = 2,nudge_x = 2, nudge_y = -5,direction = "y",
-  #                 segment.color = "blue",colour = "blue")+
   theme(legend.position = c(0.9, 0.2),plot.title = element_text(hjust = 0.5))+
-  scale_colour_manual(values = c(vsly=col_list$col_vsly,
+  scale_colour_manual(values = c(vsly  = col_list$col_vsly,
                                  heat1 = col_list$col_heat1,
-                                 vsl11 = col_list$col_vsl11))
+                                 vsl55 = col_list$col_vsl55))
 
 
 fig2 <- grid.arrange(plot_yng, plot_old, ncol=2) # create gridplot
@@ -168,96 +159,24 @@ ggsave(plot = fig2,filename = "./outputs/figure2.png")
 #   Figure 3  #
 #-------------#
 
-# set country to latvia
-temp.country <- "LVA"   
-
-# set individual ages from 20 to 74
-ages <- c(rep(NA,19),
-          rep(c("20-24","25-29","30-34","35-39","40-44","45-49",
-                "50-54","55-59","60-64","65-69","70-74"),each=5),
-          rep(NA,25))
-
-# age distribution, 1s and 0s indicating whethether in specific age group or not.
-input.agedist    <-   matrix(0,nrow = 1,ncol = 11) 
-colnames(input.agedist)<-c("20-24","25-29","30-34","35-39",
-                           "40-44","45-49","50-54","55-59",
-                           "60-64","65-69","70-74")
-
-# Create results table:
-age.results <- matrix(data = NA,nrow = 100,ncol = 4)
-colnames(age.results) <- c("vsly","heat1", "heat2","vsl11")
-age.results.c <- age.results # age results c to be used for cycling
-
-for(a in 20:74){
-  input.agedist[,] <- 0         # initialise age distributions to zeros
-  input.agedist[,ages[a]] <- 1  # assign age to appropriate band.
-  
-  age.results[a,]  <- c(f.vsly.mb(n_people = 1,
-                                  add.mins = 10,
-                                  country = temp.country,
-                                  mode = "walking",
-                                  select.age.dist = input.agedist),
-                        f.vsl.1g( n_people = 1,
-                                  add.mins = 10,
-                                  country = temp.country,
-                                  mode = "walking",
-                                  select.age.dist = input.agedist),
-                        f.vsl.2g( n_people = 1,
-                                  add.mins = 10,
-                                  country = temp.country,
-                                  mode = "walking",
-                                  select.age.dist = input.agedist),
-                        f.vsl.11g(n_people = 1,
-                                  add.mins = 10,
-                                  country = temp.country,
-                                  mode = "walking",
-                                  select.age.dist = input.agedist)
-  )
-  
-  # ignore cycling for now.
-#  age.results.c[a,] <- c(f.vsly.mb(n_people = 1,
-#                                  add.mins = 10,
-#                                  country = temp.country,
-#                                  mode = "cycling",
-#                                  select.age.dist = input.agedist),
-#                        f.vsl.1g( n_people = 1,
-#                                  add.mins = 10,
-#                                  country = temp.country,
-#                                  mode = "cycling",
-#                                  select.age.dist = input.agedist),
-#                        f.vsl.2g( n_people = 1,
-#                                  add.mins = 10,
-#                                  country = temp.country,
-#                                  mode = "cycling",
-#                                  select.age.dist = input.agedist),
-#                        f.vsl.11g(n_people = 1,
-#                                  add.mins = 10,
-#                                  country = temp.country,
-#                                  mode = "cycling",
-#                                  select.age.dist = input.agedist)
-#  )
-  
-} # end age loop
-
-## MANUSCRIPT PLOT
-
-# create data-frame
-d.f <- as.data.frame(age.results)
-colnames(d.f) <- c("VSLY","HEAT1Grp","HEAT2Grp","VSL11Grp")
+d.f <- read.csv("outputs/age_specific_results.csv",row.names = 1,col.names = c("","vsly","heat1","heat2","vsl55"))
 d.f$age <- 1:100
 # melt dataframe to use ggplot.
-d.f <- melt(d.f,measure.vars = c("VSLY","HEAT1Grp","HEAT2Grp","VSL11Grp"))
-colnames(d.f)[2] <- "Method" 
+d.f <- melt(d.f,measure.vars = c("vsly","heat1","heat2","vsl55")); colnames(d.f)[colnames(d.f)=="variable"] <- "Model" 
+
 
 # ggplot
-ggplot(d.f, aes(x = age, y= value))+
+fig3 <- (ggplot(d.f, aes(x = age, y= value, col = Model))+
   
   theme_classic()+
   
-  geom_step(aes(colour=Method),size=1.25)+
+  geom_step()+
   
-  labs(caption = "Data Sources: WHO Mort, GBD Pop, HEAT VSL", 
-       x = "Age", y = "Monetary Benefit (Euro)")+
+  ylim(c(0,150))+
+  
+  labs(caption = "Data Sources: WHO Mort, GBD Pop, HEAT VSL",  # note need main title in paper.
+       x = "Age", 
+       y = "Monetary Benefit (Euro)")+
   
   scale_x_continuous(limits = c(20,74),
                      breaks = c(20,30,40,50,60,70))+
@@ -265,58 +184,12 @@ ggplot(d.f, aes(x = age, y= value))+
   theme(axis.text.x = element_text(size = 8),
         axis.text.y = element_text(size = 8)) +
   
-  theme(legend.position = c(0.1, 0.9))
+  theme(legend.position = c(0.1, 0.8)) + 
+  
+  scale_colour_manual(values = c(vsly  = col_list$col_vsly,
+                                 heat1 = col_list$col_heat1,
+                                 vsl55 = col_list$col_vsl55,
+                                 heat2 = "black"))
+)
+ggsave(plot = fig3,filename = "./outputs/figure3.png")
 
-
-
-
-
-
-#  plot1 <- (ggplot(data = d.f,aes(x = HEAT2,y = value))+
-#              theme_classic()+
-#              geom_point(aes(colour=Method))+
-#              geom_abline(slope = 1)+
-#              annotate(geom="text", x=130, y=150, 
-#                       label="VSLY = HEAT 2Grp", color="black",size=3)+
-#              labs(title = "Age 20-44", 
-#                   x = "HEAT 2 Group Method (Euro)", 
-#                   y = "Other Methods (Euro)",
-#                   caption = "Data Sources: WHO Mort, GBD Pop, HEAT VSL")+
-#              xlim(0, 150) + ylim(0,150)+
-#              theme(legend.position = c(0.9, 0.2),
-#                    plot.title = element_text(hjust = 0.5))
-#            
-#  )
-#
-#  VSLY <- results[,"vsly_w4574"]
-#  d.f <- as.data.frame(VSLY)
-#  d.f$HEAT2 <- HEAT2 <- results[,"heat2_w4574"]
-#  d.f$VSL11 <- VSL11 <- results[,"vsl11_w4574"]
-#  d.f$HEAT1 <- HEAT1 <- results[,"heat1_w4574"]
-#  d.f$country <- rownames(d.f)
-#  
-#  # change to long format
-#  d.f <- gather(data=d.f,key=Method,value=value,c(VSLY,VSL11,HEAT1))
-#  
-#  plot2 <- (ggplot(data = d.f,aes(x = HEAT2,y = value))+
-#              theme_classic()+
-#              geom_point(aes(colour=Method))+
-#              geom_abline(slope = 1)+
-#              annotate(geom="text", x=130, y=150, 
-#                       label="VSLY = HEAT 2Grp", color="black",size=3)+
-#              labs(title = "Age 45-74",
-#                   caption = "Data Sources: WHO Mort, GBD Pop, HEAT VSL", 
-#                   x = "HEAT 2 Group Method (Euro)", 
-#                   y = "Other Methods (Euro)")+
-#              xlim(0, 150) + ylim(0,150)+
-#              theme(legend.position = c(0.9, 0.2),plot.title = element_text(hjust = 0.5))
-#            #geom_label_repel(data= d.f[d.f$Method=="VSLY",],
-#            #                 label = d.f[d.f$Method=="VSLY",]$country, 
-#            #                 size = 2, nudge_x = 2, nudge_y = -5,direction = "y",
-#            #                 segment.color = "blue",colour="blue")
-#  )
-#  
-#  
-#  return(
-#    grid.arrange(plot1, plot2, ncol=2)
-    

@@ -40,15 +40,15 @@ dt <- dt[measure_name == "Probability of death" & age_group_name %in% params$age
          .(age_group_name,val), 
          by= .(location_name,sex_name,measure_name)]
 
-# save this file for use in analysis 
-write.csv(x = dt, file = "cleandata/gbd17_mortrates.csv")
+# save this file for use in analysis - DEPRICATED
+#write.csv(x = dt, file = "cleandata/gbd17_mortrates.csv")
 
 #------------------#
 #   DLYR FUNCTION  #
 #------------------#
 
-f_calc_dlyr <- function(country = "Georgia", 
-                        sex = "Male", 
+f_calc_dlyr <- function(country = NA, 
+                        sex = NA, 
                         dt_lifetables = dt, 
                         d_r = params$d_r){
 
@@ -101,10 +101,11 @@ for(c in params$countries){
 }
 
 # storing data as one long dataset
-df_dlyr <- rbind(melt(data = results$male,value.name = "dlyr"),
-              melt(data = results$fmle,value.name = "dlyr"))
-df_dlyr$sex = rep(c("male","fmle"), each= nrow(df_dlyr)/2)
-dimnames(df_dlyr) <- list(1:nrow(df_dlyr),c("age","DisplayString","dlyr","sex"))
+df_dlyr <- cbind(melt(data = results$male,value.name = "dlyr"),
+              melt(data = results$fmle,value.name = "dlyr")$dlyr)
+
+#df_dlyr$sex = rep(c("male","fmle"), each= nrow(df_dlyr)/2)
+dimnames(df_dlyr) <- list(1:nrow(df_dlyr),c("age","DisplayString","dlyr_m","dlyr_f"))
 df_dlyr$ISO_Code  <- heat_data$ISO_Code[match(df_dlyr$DisplayString,heat_data$DisplayString)]
 
 #------------------#
