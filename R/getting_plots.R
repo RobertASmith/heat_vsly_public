@@ -87,7 +87,8 @@ fig1 <- ggplot(data = long,
                                    heat1 = col_list$col_heat1,
                                    vsl55 = col_list$col_vsl55))
   
-ggsave(plot = fig1,filename = "./outputs/figure1.png")
+ggsave(plot = fig1,filename = "./outputs/figure1.png",
+       width = 8, height = 8)
 
 #---- Figure 2 ----
 # Population age 20-44
@@ -152,7 +153,8 @@ plot_old <- ggplot(data = long_old,
 
 
 fig2 <- grid.arrange(plot_yng, plot_old, ncol=2) # create gridplot
-ggsave(plot = fig2,filename = "./outputs/figure2.png")
+ggsave(plot = fig2,filename = "./outputs/figure2.png",
+       width = 8, height = 8)
 
 
 #-------------#
