@@ -61,7 +61,7 @@ gbd_lt      <- read.csv("cleandata/gbd17_mortrates.csv",stringsAsFactors = F,row
 gbd_pop     <- read.csv("cleandata/gbd_pop.csv",stringsAsFactors = F,row.names = 1)
 #perc_fmle   <- read.csv("cleandata/perc_fmle.csv",stringsAsFactors = F,row.names = 1)
 # who_mort  <- read.csv("cleandata/who_mort.csv",stringsAsFactors = F,row.names = 1)
-
+gbd_heatmort <- read.csv("cleandata/gbd17_heatmorts.csv",stringsAsFactors = F,row.names = 2)
 
 #-------------------------# 
 #        INITIALISE       #
@@ -69,6 +69,8 @@ gbd_pop     <- read.csv("cleandata/gbd_pop.csv",stringsAsFactors = F,row.names =
 
 # empty list
 params <- list()
+
+params$heat_or_gbd = "gbd"
 
 # vector of countries
 params$v_countries = rownames(heat_data)[rownames(heat_data) %in% rownames(vsly)]
@@ -134,11 +136,27 @@ for(c in 1:params$n_countries){
   # COUNTRY SPECIFIC MODEL PARAMETERS
   inputs$vsl             <-   heat_data[country,"VSL"]                   # VSL taken from HEAT Gitbhub dataset.
   inputs$vsly            <-   vsly[country,"vsly_all"]                   # VSLY estimated in previous analysis.   
+  
+  if(params$heat_or_gbd == "heat"){
+  
   inputs$heat_mort2074   <-   heat_data[country,"age2074"] /100000       # baseline risk from HEAT Github
   inputs$heat_mort2044   <-   heat_data[country,"age2044"] /100000       # baseline risk from HEAT Github
   inputs$heat_mort4574   <-   heat_data[country,"age4574"] /100000       # baseline risk from HEAT Github
   inputs$heat_mort2064   <-   heat_data[country,"age2064"] /100000       # baseline risk from HEAT Github
   inputs$heat_mort4564   <-   heat_data[country,"age4564"] /100000       # baseline risk from HEAT Github
+  
+    }else if(params$heat_or_gbd == "gbd"){
+    
+    inputs$heat_mort2074   <-   gbd_heatmort[country,"mort20_74"]        # baseline risk from GBD & clean_load.R
+    inputs$heat_mort2044   <-   gbd_heatmort[country,"mort20_44"]        # baseline risk from GBD & clean_load.R
+    inputs$heat_mort4574   <-   gbd_heatmort[country,"mort45_74"]        # baseline risk from GBD & clean_load.R
+    inputs$heat_mort2064   <-   gbd_heatmort[country,"mort20_64"]        # baseline risk from GBD & clean_load.R
+    inputs$heat_mort4564   <-   gbd_heatmort[country,"mort45_64"]        # baseline risk from GBD & clean_load.R
+    
+    
+  }else{print("fail")} 
+  
+  
   # population at each age from 1 to 94
   inputs$gen_pop         <-   gbd_pop[gbd_pop$ISO_Code == country,c("age","All")]
   # discounted life years remaining from 1 to 109
