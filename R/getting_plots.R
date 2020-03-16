@@ -182,7 +182,7 @@ if(params$heat_or_gbd == "gbd"){
 #   Figure 3  #
 #-------------#
 
-d.f <- read.csv("outputs/age_specific_results.csv",row.names = 1,col.names = c("","vsly","heat1","heat2","vsl55"))
+d.f <- read.csv("outputs/gbd_age_results.csv",row.names = 1,col.names = c("","vsly","heat1","heat2","vsl55"))
 d.f$age <- 1:100
 # melt dataframe to use ggplot.
 d.f <- melt(d.f,measure.vars = c("vsly","heat1","heat2","vsl55")); colnames(d.f)[colnames(d.f)=="variable"] <- "Model" 
@@ -204,6 +204,7 @@ fig3 <- (ggplot(d.f, aes(x = age, y= value, col = Model))+
   scale_x_continuous(limits = c(20,74),
                      breaks = c(20,30,40,50,60,70))+
   #xlim(20,74)+
+    ylim(c(0,60))+
   theme(axis.text.x = element_text(size = 8),
         axis.text.y = element_text(size = 8)) +
   
