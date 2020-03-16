@@ -21,11 +21,18 @@ col_list = list(col_vsly = "blue",
                 col_heat1 = "red",
                 col_vsl55 = "green")
 
+params <- list()
+params$heat_or_gbd = "gbd"   # select either heat or gbd.
+
 #--- LOAD RESULTS ---#
 
-results <- read.csv("./outputs/Results.csv",stringsAsFactors = F,row.names = 1)
+# either heat or gbd
+if(params$heat_or_gbd == "gbd"){
+results <- read.csv("./outputs/heat_results.csv",stringsAsFactors = F,row.names = 1) 
+}else if(params$heat_or_gbd == "heat"){
+  results <- read.csv("./outputs/gbd_results.csv",stringsAsFactors = F,row.names = 1)
+}
 
-results[,1:4]
 #---- Table 1 ----
 
 # Latex
@@ -41,7 +48,12 @@ table1 <- datatable(round(results[c("FRA", "DEU","LUX","ROU","LVA", "POL"),1:4],
           colnames = c("VSLY","Heat1","Heat2","VSL55"),
           options = list(dom = 't'))
 
-ggsave(filename = table1,plot = table1)
+# SAVE DATATABLE either heat or gbd # not working.
+if(params$heat_or_gbd == "gbd"){
+  ggsave(filename = "./outputs/gbd_table1.png",plot = table1)
+}else if(params$heat_or_gbd == "heat"){
+  ggsave(filename = "./outputs/heat_table1.png",plot = table1)
+}
 
 # full table of results for all countries
 datatable(results[,1:4],
@@ -86,9 +98,13 @@ fig1 <- ggplot(data = long,
     scale_colour_manual(values = c(vsly = col_list$col_vsly,
                                    heat1 = col_list$col_heat1,
                                    vsl55 = col_list$col_vsl55))
-  
-ggsave(plot = fig1,filename = "./outputs/figure1.png",
-       width = 8, height = 8)
+
+# SAVE FIG1 either heat or gbd
+if(params$heat_or_gbd == "gbd"){
+  ggsave(filename = "./outputs/gbd_figure1.png",plot = fig1, width = 8, height = 8)
+}else if(params$heat_or_gbd == "heat"){
+  ggsave(filename = "./outputs/heat_figure1.png",plot = fig1, width = 8, height = 8)
+}
 
 #---- Figure 2 ----
 # Population age 20-44
@@ -153,8 +169,13 @@ plot_old <- ggplot(data = long_old,
 
 
 fig2 <- grid.arrange(plot_yng, plot_old, ncol=2) # create gridplot
-ggsave(plot = fig2,filename = "./outputs/figure2.png",
-       width = 8, height = 8)
+
+# SAVE FIG2 either heat or gbd
+if(params$heat_or_gbd == "gbd"){
+  ggsave(filename = "./outputs/gbd_figure2.png",plot = fig2, width = 8, height = 8)
+}else if(params$heat_or_gbd == "heat"){
+  ggsave(filename = "./outputs/heat_figure2.png",plot = fig2, width = 8, height = 8)
+}
 
 
 #-------------#
@@ -193,5 +214,11 @@ fig3 <- (ggplot(d.f, aes(x = age, y= value, col = Model))+
                                  vsl55 = col_list$col_vsl55,
                                  heat2 = "black"))
 )
-ggsave(plot = fig3,filename = "./outputs/figure3.png")
+
+# SAVE FIG1 either heat or gbd
+if(params$heat_or_gbd == "gbd"){
+  ggsave(filename = "./outputs/gbd_figure3.png",plot = fig3, width = 8, height = 8)
+}else if(params$heat_or_gbd == "heat"){
+  ggsave(filename = "./outputs/heat_figure3.png",plot = fig3, width = 8, height = 8)
+}
 

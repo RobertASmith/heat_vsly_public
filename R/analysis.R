@@ -24,13 +24,11 @@ f_install_n_load <- function(packages){    # install & load package.
   }
 }
 
-required_packages = c('knitr','tidyverse','rworldmap',
-                      'reshape2','ggplot2','dplyr',
-                      'tidyr','mc2d','ggrepel',
-                      'gridExtra','kableExtra','rgeos',
-                      'flextable','viridis','readxl','magrittr', 'data.table')
-
-f_install_n_load(required_packages)
+f_install_n_load(c('knitr','tidyverse','rworldmap',
+                   'reshape2','ggplot2','dplyr',
+                   'tidyr','mc2d','ggrepel',
+                   'gridExtra','kableExtra','rgeos',
+                   'flextable','viridis','readxl','magrittr', 'data.table'))
 
 #-----------------------#
 #     SOURCE FUNCTIONS
@@ -313,9 +311,15 @@ for(c in 1:params$n_countries){
                                                select.age.dist = params$age_dist$age45to64)
   
 }
-  
-  write.csv(results, file="outputs/Results.csv") 
-  
+
+# save to file named depending on heat or gbd
+if(params$heat_or_gbd == "heat"){
+  write.csv(x = results,file = "outputs/heat_results.csv" ) 
+}else if(params$heat_or_gbd == "gbd"){
+  write.csv(x = results,file = "outputs/gbd_results.csv" )
+}else{print("fail")}
+
+
 #------------------------#
 #  ADDITIONAL ANALYSIS   #
 #------------------------#
@@ -375,4 +379,9 @@ for(c in 1:params$n_countries){
     #  )
     
   } # end age loop
-write.csv(x = age.results,file = "outputs/age_specific_results.csv" ) 
+  
+  if(params$heat_or_gbd == "heat"){
+    write.csv(x = age.results,file = "outputs/heat_age_results.csv" ) 
+    }else if(params$heat_or_gbd == "gbd"){
+      write.csv(x = age.results,file = "outputs/gbd_age_results.csv" )
+        }else{print("fail")}
