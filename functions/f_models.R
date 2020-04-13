@@ -4,21 +4,25 @@
 
 f.vsly.mb <- function(n_people = 1, # number of people
                       add.mins = 10, # additional minutes
-                      country = NA,  # country
+                      country = country,  # country
                       mode = "walking",     # mode of travel
-                      select.age.dist = NA, # age distribution
+                      select.age.dist = 20:74, # age distribution
                       rr_walk_lit = params$rr_walk_lit,            # relative risk walking
                       rr_cycle_lit = params$rr_cycle_lit,          # relative risk cycling
                       ref_duration_walk = params$ref_duration_walk,# reference duration walking
                       ref_duration_cycle = params$ref_duration_cycle, # reference duration cycling
                       max_rr_walk = params$max_rr_walk,             # max risk reduction walking
                       max_rr_cycle = params$max_rr_cycle,           # max risk reduction cycling
-                      gen_pop = inputs$gen_pop,                     # population each age
-                      perc_fmle = inputs$perc_fmle,                 # percentage female each age
-                      vsly = inputs$vsly,                           # vsly
-                      m_dlyr = inputs$dlyr,                         # discounted life years remaining
-                      m_lt = inputs$gbd_mort                       # gbd lifetables
+                      merged_lt = merged_lt,
+                      merged_data = merged_data
                       ){ 
+  
+  
+  # read in data from merged datatables.
+  vsly    = merged_data[ISO_Code == country,vsly_all]
+  gen_pop = merged_lt[ISO_Code == country & age %in% select.age.dist, pop]
+  dlyr    = merged_lt[ISO_Code == country & age %in% select.age.dist, dlyr]
+  mr      = merged_lt[ISO_Code == country & age %in% select.age.dist, mr]
   
   if(mode=="walking"){   
     
@@ -29,37 +33,44 @@ f.vsly.mb <- function(n_people = 1, # number of people
     rr <- max(1 - (1-rr_cycle_lit) * (add.mins/ ref_duration_cycle), max_rr_cycle)
   
     } else { rr <- "broken"
-  }
+    }
   
   # calculates percent in each age group
-  prop.pop <- gen_pop[gen_pop$age %in% select.age.dist,"All"] / sum(gen_pop[gen_pop$age %in% select.age.dist,"All"])  
+  prop.pop <- gen_pop / sum(gen_pop)  
   
-  lys  <- sum(m_lt[m_lt$age %in% select.age.dist,c("Female","Male")] *         # mortality rate for each age and sex
-              (1-rr) *                                                         # relative risk reduction.
-              m_dlyr[m_dlyr$age %in% select.age.dist,c("dlyr_f","dlyr_m")] *   # discounted life years remaining
-              prop.pop)                                                        # proportion of population in each year
+  lys  <- sum(mr  *  (1-rr) *  dlyr *   prop.pop)     # proportion of population in each year
  
-  mb   <- lys * vsly ** n_people            # calculates monetary benefit per person
+  mb   <- lys * vsly * n_people            # calculates monetary benefit per person
   
   return(mb)
   
   }
 
-# change this code to reflect new data sources,
+
+
+
+
+
+
+# ONE GROUP
+
 
 f.vsl.1g <- function( add.mins = 10,
                       n_people = 1,
                       country = NA,
                       mode = "walking",
-                      vsl = inputs$vsl,
                       rr_walk_lit = params$rr_walk_lit,            # relative risk walking
                       rr_cycle_lit = params$rr_cycle_lit,          # relative risk cycling
                       ref_duration_walk = params$ref_duration_walk,# reference duration walking
                       ref_duration_cycle = params$ref_duration_cycle, # reference duration cycling
                       max_rr_walk = params$max_rr_walk,             # max risk reduction walking
                       max_rr_cycle = params$max_rr_cycle,           # max risk reduction cycling
-                      heat_mort2074 = inputs$heat_mort2074,
-                      heat_mort2064 = inputs$heat_mort2064){
+                      merged_data = merged_data){
+  
+  # input parameters from merged_data
+  heat_mort2074 = merged_data[ISO_Code == country,mort20_74]
+  heat_mort2064 = merged_data[ISO_Code == country,mort20_64]
+  vsl           = merged_data[ISO_Code == country,VSL]
   
   if(mode=="walking"){   
     
@@ -75,41 +86,52 @@ f.vsl.1g <- function( add.mins = 10,
       
         } else {print("broken")}
   
-  mb <- ls*vsl*n_people   # monetary benefit just lives saved (rate*number) multiplied by vsl.
+  mb <- ls * vsl * n_people   # monetary benefit just lives saved (rate*number) multiplied by vsl.
   
   return(mb)
 }
 
 
+
+# TWO GROUPS
+
+
+
+
 f.vsl.2g <- function(add.mins = 10,
                      n_people = 1,
-                     country = NA,
+                     country = "UKR",
                      mode = "walking",
-                     vsl = inputs$vsl,
-                     select.age.dist = NA, # age distribution
-                     gen_pop = inputs$gen_pop,                    # population each age
+                     select.age.dist = 20:74, # age distribution
                      rr_walk_lit = params$rr_walk_lit,            # relative risk walking
                      rr_cycle_lit = params$rr_cycle_lit,          # relative risk cycling
                      ref_duration_walk = params$ref_duration_walk,# reference duration walking
                      ref_duration_cycle = params$ref_duration_cycle, # reference duration cycling
                      max_rr_walk = params$max_rr_walk,             # max risk reduction walking
                      max_rr_cycle = params$max_rr_cycle,           # max risk reduction cycling
-                     heat_mort2074 = inputs$heat_mort2074,
-                     heat_mort2064 = inputs$heat_mort2064,
-                     heat_mort2044 = inputs$heat_mort2044,
-                     heat_mort4574 = inputs$heat_mort4574,
-                     heat_mort4564 = inputs$heat_mort4564 
+                     merged_data = merged_data,
+                     merged_lt = merged_lt
                      ){
   
-  population <- matrix(data = 0,nrow = 100,ncol = 1,dimnames = list(1:100,"pop"))
-  population[select.age.dist,"pop"] <- gen_pop[gen_pop$age %in% select.age.dist,"All"]
- # population = gen_pop[gen_pop$age %in% select.age.dist,"All"]   # vector of total population 
+  # input parameters from merged_data
+  heat_mort2074 = merged_data[ISO_Code == country,mort20_74]
+  heat_mort2064 = merged_data[ISO_Code == country,mort20_64]
+  heat_mort2044 = merged_data[ISO_Code == country,mort20_44]
+  heat_mort4574 = merged_data[ISO_Code == country,mort45_74]
+  heat_mort4564 = merged_data[ISO_Code == country,mort45_64]
+  vsl    = merged_data[ISO_Code == country,VSL]
+  
+  # input parameters from merged_lt
+  gen_pop = merged_lt[ISO_Code == country & age %in% select.age.dist, .(pop,age)]
+  dlyr    = merged_lt[ISO_Code == country & age %in% select.age.dist, dlyr]
+  mr      = merged_lt[ISO_Code == country & age %in% select.age.dist, mr]
+  
   
   if(mode=="walking"){   
     
     # calculate the proportion of the population young and old.
-    prop.yng = sum(population[20:44,"pop"]) / sum(population[20:74,"pop"])
-    prop.old = sum(population[45:74,"pop"]) / sum(population[20:74,"pop"]) 
+    prop.yng = sum(gen_pop[age %in% 20:44,pop]) / sum(gen_pop[age %in% 20:74,pop])
+    prop.old = sum(gen_pop[age %in% 45:74,pop]) / sum(gen_pop[age %in% 20:74,pop]) 
     
     # calculate relative risk
     rr <- max(1 - (1-rr_walk_lit) * (add.mins/ ref_duration_walk), max_rr_walk)
@@ -119,8 +141,8 @@ f.vsl.2g <- function(add.mins = 10,
   } else if(mode=="cycling"){
     
     # calculate the proportion of the population young and old.
-    prop.yng = sum(population[20:44,"pop"]) / sum(population[20:74,"pop"])
-    prop.old = sum(population[45:64,"pop"]) / sum(population[20:64,"pop"]) 
+    prop.yng = sum(gen_pop[age %in% 20:44,pop]) / sum(gen_pop[age %in% 20:64,pop])
+    prop.old = sum(gen_pop[age %in% 45:64,pop]) / sum(gen_pop[age %in% 20:64,pop]) 
     
     # calculate relative risk
     rr <- max(1 - (1-rr_cycle_lit) * (add.mins/ ref_duration_cycle), max_rr_cycle)
@@ -140,17 +162,23 @@ f.vsl.55g <- function(add.mins = 10,
                       n_people = 1,
                       country = NA,
                       mode = "walking",
-                      vsl = inputs$vsl,
-                      select.age.dist = NA, # age distribution
-                      gen_pop = inputs$gen_pop,                    # population each age
+                      select.age.dist = 20:74, # age distribution
                       rr_walk_lit = params$rr_walk_lit,            # relative risk walking
                       rr_cycle_lit = params$rr_cycle_lit,          # relative risk cycling
                       ref_duration_walk = params$ref_duration_walk,# reference duration walking
                       ref_duration_cycle = params$ref_duration_cycle, # reference duration cycling
                       max_rr_walk = params$max_rr_walk,             # max risk reduction walking
                       max_rr_cycle = params$max_rr_cycle,
-                      m_lt = inputs$gbd_mort                       # gbd lifetables
-                      ){
+                      merged_data = merged_data,
+                      merged_lt = merged_lt){
+  
+  # input parameters from merged_data
+  vsl    = merged_data[ISO_Code == country,VSL]
+  
+  # input parameters from merged_lt
+  gen_pop = merged_lt[ISO_Code == country & age %in% select.age.dist, .(pop,age)]
+  dlyr    = merged_lt[ISO_Code == country & age %in% select.age.dist, dlyr]
+  mr      = merged_lt[ISO_Code == country & age %in% select.age.dist, mr]
   
   if(mode=="walking"){ 
     
@@ -163,15 +191,11 @@ f.vsl.55g <- function(add.mins = 10,
   } else { rr <- "broken"
   }
   
-  prop.pop <- gen_pop[gen_pop$age %in% select.age.dist,"All"] / sum(gen_pop[gen_pop$age %in% select.age.dist,"All"])  
-  #prop.pop <- (gen_pop[country,5:15]*select.age.dist) / sum(gen_pop[country,5:15]*select.age.dist)  # calculates percent in each age group
+  prop.pop <- gen_pop / sum(gen_pop)  
+
+  ls       <- sum(mr * (1-rr) * prop.pop)            # lives saved
   
-  ls  <- sum(m_lt[m_lt$age %in% select.age.dist,c("Female","Male")] *            # mortality rate for each age and sex
-                (1-rr) *                                                         # relative risk reduction.
-                prop.pop)                                                        # proportion of population in each year
-  
- 
-  mb <- ls * vsl * n_people
+  mb       <- ls * vsl * n_people                     # monetary benefit
   
   return(mb)
   
