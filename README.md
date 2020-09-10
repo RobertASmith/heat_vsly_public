@@ -1,7 +1,12 @@
 # Using the Value of a Statistical Life Year in the WHO Health Economic Assessment Tool for Walking and Cycling
 
-A public repository containing the code and data for the HEAT VSLY paper published here: XXXXXX
+[![GitHub release](https://img.shields.io/badge/R-HEDS-green)](https://img.shields.io/badge/R-HEDS-green)
+![GitHub last commit](https://img.shields.io/github/last-commit/RobertASmith/heat_vsly_public?color=red&style=plastic)
+![GitHub top language](https://img.shields.io/github/languages/top/RobertASmith/heat_vsly_public?style=plastic)
+![GitHub repo size](https://img.shields.io/github/repo-size/RobertASmith/heat_vsly_public?style=plastic)
+[![GitHub forks](https://img.shields.io/github/forks/RobertASmith/heat_vsly_public?style=social&label=Fork&maxAge=2592000)](https://GitHub.com/RobertASmith/shiny_healthy_economics/network/)
 
+A public repository containing the code and data for the HEAT VSLY paper published here: XXXXXX
 
 There are several folders in this repository:
 
